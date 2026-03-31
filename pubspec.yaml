@@ -14,7 +14,6 @@ dependencies:
     sdk: flutter
   intl: ^0.20.2
   get_it: ^7.2.0
-  shared_preferences: ^2.2.2
   media_kit:
     git:
       url: https://github.com/media-kit/media-kit.git
