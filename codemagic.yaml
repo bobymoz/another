@@ -15,7 +15,6 @@ workflows:
       - name: Construir o AAB (Para a Google Play Store)
         script: |
           flutter build appbundle --release
-  artifacts:
-      # O asterisco (*) diz ao Codemagic para recolher TODOS os APKs leves que o Flutter gerou
+    artifacts:
       - build/app/outputs/flutter-apk/*.apk
       - build/app/outputs/bundle/release/app-release.aab
