@@ -136,9 +136,9 @@ class _M3UHomeScreenState extends State<M3UHomeScreen> {
         playlistId: widget.playlist.id,
       ),
       M3uItemsScreen(m3uItems: controller.m3uItems!),
-      // _buildContentPage(controller.liveCategories!, controller),
-      // _buildContentPage(controller.vodCategories!, controller),
-      // _buildContentPage(controller.seriesCategories!, controller),
+      _buildContentPage(controller.liveCategories!, controller),
+      _buildContentPage(controller.vodCategories!, controller),
+      _buildContentPage(controller.seriesCategories!, controller),
       M3uPlaylistSettingsScreen(playlist: widget.playlist),
     ];
   }
@@ -365,21 +365,21 @@ class _M3UHomeScreenState extends State<M3UHomeScreen> {
     return [
       NavigationItem(icon: Icons.history, label: context.loc.history, index: 0),
       NavigationItem(icon: Icons.all_inbox, label: context.loc.all, index: 1),
-      // NavigationItem(icon: Icons.live_tv, label: context.loc.live, index: 2),
-      // NavigationItem(
-      //   icon: Icons.movie_outlined,
-      //   label: context.loc.movie,
-      //   index: 3,
-      // ),
-      // NavigationItem(
-      //   icon: Icons.tv,
-      //   label: context.loc.series_plural,
-      //   index: 4,
-      // ),
+      NavigationItem(icon: Icons.live_tv, label: context.loc.live, index: 2),
+      NavigationItem(
+        icon: Icons.movie_outlined,
+        label: context.loc.movie,
+        index: 3,
+      ),
+      NavigationItem(
+        icon: Icons.tv,
+        label: context.loc.series_plural,
+        index: 4,
+      ),
       NavigationItem(
         icon: Icons.settings,
         label: context.loc.settings,
-        index: 2,
+        index: 5,
       ),
     ];
   }
