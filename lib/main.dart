@@ -216,7 +216,7 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
 }
 
 // ==========================================
-// TELA 2: CATÁLOGO DE CANAIS (COM CARROSSEL)
+// TELA 2: CATÁLOGO DE CANAIS
 // ==========================================
 class ChannelsScreen extends StatefulWidget {
   final String lang;
@@ -520,7 +520,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
 }
 
 // ==========================================
-// TELA DO HISTÓRICO 
+// TELA DO HISTÓRICO CORRIGIDA
 // ==========================================
 class HistoryScreen extends StatefulWidget {
   final String lang;
@@ -562,18 +562,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
               itemCount: history.length,
               itemBuilder: (context, index) {
                 final c = history[index];
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                  tileColor: const Color(0xFF1E1E1E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  margin: const EdgeInsets.only(bottom: 10),
-                  leading: c.logo.isNotEmpty 
-                      ? Image.network(c.logo, width: 60, errorBuilder: (_,__,___) => Icon(getCategoryIcon(c.category), size: 40))
-                      : Icon(getCategoryIcon(c.category), size: 40),
-                  title: Text(c.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  subtitle: Text(c.category, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
-                  trailing: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c))),
+                // CORREÇÃO: Usando Padding em vez do margin dentro do ListTile
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                    tileColor: const Color(0xFF1E1E1E),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    leading: c.logo.isNotEmpty 
+                        ? Image.network(c.logo, width: 60, errorBuilder: (_,__,___) => Icon(getCategoryIcon(c.category), size: 40))
+                        : Icon(getCategoryIcon(c.category), size: 40),
+                    title: Text(c.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    subtitle: Text(c.category, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
+                    trailing: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c))),
+                  ),
                 );
               },
             ),
@@ -582,7 +585,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// TELA 3: REPRODUTOR DE VÍDEO (OTIMIZADO PARA INTERNET MEGA FRACA)
+// TELA 3: REPRODUTOR DE VÍDEO OTIMIZADO (LIGAÇÃO FRACA)
 // ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
@@ -601,8 +604,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     
-    // 1. TAMANHO DE INÍCIO MINÚSCULO: Apenas 1MB. 
-    // Assim que ele baixar 1 mega (quase instantâneo), o vídeo já começa a rodar.
     player = Player(
       configuration: const PlayerConfiguration(
         bufferSize: 1 * 1024 * 1024, 
@@ -610,15 +611,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
     controller = VideoController(player);
     
-    // 2. CACHE AGRESSIVO EM SEGUNDO PLANO PARA REDES FRACAS
     player.open(
       Media(
         widget.channel.url,
         extras: {
-          'network-timeout': 60, // Se a internet cair, ele espera 60 segundos antes de dar erro
-          'cache': 'yes',        // Liga a memória inteligente do MPV
-          'cache-secs': 15,      // Tenta armazenar até 15 segundos do futuro do canal se a rede permitir
-          'demuxer-max-bytes': '10000KiB', // Permite que ele guarde até 10MB escondido no fundo
+          'network-timeout': 60, 
+          'cache': 'yes',        
+          'cache-secs': 15,      
+          'demuxer-max-bytes': '10000KiB', 
           'demuxer-readahead-secs': 15,
         },
       ),
@@ -642,7 +642,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
           Center(
             child: Video(
               controller: controller,
-              // Mantém os controlos táteis (gestos de deslizar) ativados
               controls: MaterialVideoControls,
             ),
           ),
