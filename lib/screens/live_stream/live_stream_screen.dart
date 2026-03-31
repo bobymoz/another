@@ -84,7 +84,12 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
     super.dispose();
   }
 
-  void _hideSystemUI() {
+ void _hideSystemUI() {
+    // Força a tela a deitar (Landscape)
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeRight,
+      DeviceOrientation.landscapeLeft,
+    ]);
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.immersiveSticky,
       overlays: [],
@@ -98,12 +103,18 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   }
 
   void _showSystemUI() {
+    // Permite que a tela volte ao normal (Retrato) quando o vídeo fechar
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.edgeToEdge,
       overlays: SystemUiOverlay.values,
     );
   }
-
   @override
   Widget build(BuildContext context) {
     if (!allContentsLoaded) {
