@@ -216,7 +216,7 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
 }
 
 // ==========================================
-// TELA 2: CATÁLOGO DE CANAIS
+// TELA 2: CATÁLOGO DE CANAIS E CARROSSEL
 // ==========================================
 class ChannelsScreen extends StatefulWidget {
   final String lang;
@@ -520,7 +520,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
 }
 
 // ==========================================
-// TELA DO HISTÓRICO CORRIGIDA
+// TELA DO HISTÓRICO
 // ==========================================
 class HistoryScreen extends StatefulWidget {
   final String lang;
@@ -562,7 +562,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
               itemCount: history.length,
               itemBuilder: (context, index) {
                 final c = history[index];
-                // CORREÇÃO: Usando Padding em vez do margin dentro do ListTile
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
@@ -585,7 +584,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// TELA 3: REPRODUTOR DE VÍDEO OTIMIZADO (LIGAÇÃO FRACA)
+// TELA 3: REPRODUTOR DE VÍDEO (EXTREMAMENTE RÁPIDO E ANTI-BLOQUEIO)
 // ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
@@ -604,9 +603,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     
+    // MICRO-BUFFER: 256 KB. Quase instantâneo, ideal para internet muito lenta.
     player = Player(
       configuration: const PlayerConfiguration(
-        bufferSize: 1 * 1024 * 1024, 
+        bufferSize: 256 * 1024, 
       ),
     );
     controller = VideoController(player);
@@ -614,12 +614,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
     player.open(
       Media(
         widget.channel.url,
+        // DISFARCE (User-Agent): Engana o servidor do canal para ele não o bloquear
+        httpHeaders: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': '*/*',
+          'Origin': 'https://google.com',
+        },
+        // EXTRAS PARA INTERNET SUPER LENTA E TV AO VIVO (Sem repetições)
         extras: {
           'network-timeout': 60, 
           'cache': 'yes',        
-          'cache-secs': 15,      
-          'demuxer-max-bytes': '10000KiB', 
-          'demuxer-readahead-secs': 15,
+          'cache-secs': 10,      
+          'demuxer-max-bytes': '4096KiB', // Limite máximo para evitar travar a rede
         },
       ),
     );
@@ -642,6 +648,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           Center(
             child: Video(
               controller: controller,
+              // Mantém os controlos táteis (gestos de deslizar para volume/brilho)
               controls: MaterialVideoControls,
             ),
           ),
