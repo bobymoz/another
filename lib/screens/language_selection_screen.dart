@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../controllers/playlist_controller.dart';
 import '../models/playlist_model.dart';
+import '../repositories/user_preferences.dart';
+import 'app_initializer_screen.dart';
 
 class LanguageSelectionScreen extends StatefulWidget {
   const LanguageSelectionScreen({super.key});
@@ -15,6 +17,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   bool _isLoading = false;
 
   void _selectLanguage(BuildContext context, String lang) async {
+    // Mostra a rodinha de carregamento enquanto prepara
     setState(() => _isLoading = true);
     
     final prefs = await SharedPreferences.getInstance();
@@ -26,10 +29,9 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
         ? "https://iptv-org.github.io/iptv/languages/por.m3u" 
         : "https://iptv-org.github.io/iptv/languages/eng.m3u";
 
-    // Chama o controlador que já existe no aplicativo original
     final playlistController = Provider.of<PlaylistController>(context, listen: false);
     
-    // Cria a lista automaticamente em segundo plano
+    // Cria a lista automaticamente
     final playlist = await playlistController.createPlaylist(
       name: 'PlayTVNow - Canais Livres',
       type: PlaylistType.m3u,
@@ -38,10 +40,17 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
 
     if (context.mounted) {
       if (playlist != null) {
-        // Se criou com sucesso, abre a lista e vai direto ver televisão
-        await playlistController.openPlaylist(context, playlist);
+        // Grava como a lista principal/última aberta
+        await UserPreferences.setLastPlaylist(playlist.id);
+        
+        // Vai para a tela de inicialização original.
+        // É ela que vai fazer o download seguro dos canais sem deixar a tela cinza!
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => AppInitializerScreen()),
+        );
       } else {
-        // Falha de segurança, vai para a home normal
+        // Se algo falhar na criação, vai para a Home vazia
         Navigator.pushReplacementNamed(context, '/home');
       }
     }
@@ -53,7 +62,14 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       backgroundColor: const Color(0xFF121212),
       body: Center(
         child: _isLoading 
-        ? const CircularProgressIndicator(color: Colors.blue) 
+        ? const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Colors.blue),
+              SizedBox(height: 20),
+              Text("Preparando canais / Preparing channels...", style: TextStyle(color: Colors.white)),
+            ],
+          )
         : Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
