@@ -1,16 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../controllers/playlist_controller.dart';
+import '../models/playlist_model.dart';
 
-class LanguageSelectionScreen extends StatelessWidget {
+class LanguageSelectionScreen extends StatefulWidget {
   const LanguageSelectionScreen({super.key});
 
+  @override
+  State<LanguageSelectionScreen> createState() => _LanguageSelectionScreenState();
+}
+
+class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
+  bool _isLoading = false;
+
   void _selectLanguage(BuildContext context, String lang) async {
+    setState(() => _isLoading = true);
+    
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_lang', lang);
     await prefs.setBool('first_run', false);
     
-    // Após escolher, ele vai para a Home (ajuste o nome da sua Home se necessário)
-    Navigator.pushReplacementNamed(context, '/home');
+    // Escolhe a lista com base na linguagem
+    final url = lang == 'pt' 
+        ? "https://iptv-org.github.io/iptv/languages/por.m3u" 
+        : "https://iptv-org.github.io/iptv/languages/eng.m3u";
+
+    // Chama o controlador que já existe no aplicativo original
+    final playlistController = Provider.of<PlaylistController>(context, listen: false);
+    
+    // Cria a lista automaticamente em segundo plano
+    final playlist = await playlistController.createPlaylist(
+      name: 'PlayTVNow - Canais Livres',
+      type: PlaylistType.m3u,
+      url: url,
+    );
+
+    if (context.mounted) {
+      if (playlist != null) {
+        // Se criou com sucesso, abre a lista e vai direto ver televisão
+        await playlistController.openPlaylist(context, playlist);
+      } else {
+        // Falha de segurança, vai para a home normal
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    }
   }
 
   @override
@@ -18,7 +52,9 @@ class LanguageSelectionScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       body: Center(
-        child: Column(
+        child: _isLoading 
+        ? const CircularProgressIndicator(color: Colors.blue) 
+        : Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
