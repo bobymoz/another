@@ -167,6 +167,7 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Usa o seu logótipo oficial da pasta assets
                   Image.asset('assets/logo.png', width: 140, errorBuilder: (c, e, s) => const Icon(Icons.live_tv, size: 100, color: Colors.white)),
                   const SizedBox(height: 20),
                   const Text("PlayTVNow", style: TextStyle(fontSize: 45, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
@@ -308,6 +309,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         elevation: 0,
         title: Row(
           children: [
+            // Usa o seu logótipo oficial da pasta assets
             Image.asset('assets/logo.png', height: 35, errorBuilder: (_,__,___) => const Icon(Icons.tv, color: Color(0xFFE50914))),
             const SizedBox(width: 10),
             const Text('PlayTVNow', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Colors.white)),
@@ -584,7 +586,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// TELA 3: REPRODUTOR DE VÍDEO (EXTREMAMENTE RÁPIDO E ANTI-BLOQUEIO)
+// TELA 3: REPRODUTOR DE VÍDEO (ESTÁVEL E SEM TRAVAMENTOS)
 // ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
@@ -603,29 +605,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     
-    // MICRO-BUFFER: 256 KB. Quase instantâneo, ideal para internet muito lenta.
-    player = Player(
-      configuration: const PlayerConfiguration(
-        bufferSize: 256 * 1024, 
-      ),
-    );
+    // Motor padrão para garantir que o mapa da transmissão carregue corretamente
+    player = Player();
     controller = VideoController(player);
     
     player.open(
       Media(
         widget.channel.url,
-        // DISFARCE (User-Agent): Engana o servidor do canal para ele não o bloquear
+        // O DISFARCE: Impede os bloqueios de servidor
         httpHeaders: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': '*/*',
-          'Origin': 'https://google.com',
-        },
-        // EXTRAS PARA INTERNET SUPER LENTA E TV AO VIVO (Sem repetições)
-        extras: {
-          'network-timeout': 60, 
-          'cache': 'yes',        
-          'cache-secs': 10,      
-          'demuxer-max-bytes': '4096KiB', // Limite máximo para evitar travar a rede
         },
       ),
     );
@@ -648,7 +638,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
           Center(
             child: Video(
               controller: controller,
-              // Mantém os controlos táteis (gestos de deslizar para volume/brilho)
               controls: MaterialVideoControls,
             ),
           ),
