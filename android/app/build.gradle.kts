@@ -29,7 +29,6 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    // Signing configurations
     signingConfigs {
         create("release") {
             if (keystorePropertiesFile.exists()) {
@@ -43,7 +42,8 @@ android {
 
     defaultConfig {
         applicationId = "dev.ogos.anotheriptvplayer"
-        minSdk = flutter.minSdkVersion
+        // 1. CORREÇÃO DO SDK: Força a versão mínima 21 (Exigência da Unity e do Vídeo)
+        minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -51,19 +51,18 @@ android {
 
     buildTypes {
         getByName("release") {
-            // Sadece keystore dosyası varsa signing kullan
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
-            isMinifyEnabled = true
+            // 2. CORREÇÃO DO CRASH: Desliga o encolhedor de código!
+            isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
 
-        // CI için imzasız build type
         create("releaseUnsigned") {
-            isMinifyEnabled = true
+            // 2. CORREÇÃO DO CRASH AQUI TAMBÉM:
+            isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // signingConfig tanımlanmıyor - imzasız build
         }
     }
 }
