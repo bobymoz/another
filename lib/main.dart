@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:async'; // A PEÇA QUE FALTAVA PARA O ESCUDO FUNCIONAR!
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -10,7 +11,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
 // ==========================================
-// ECRÃ DE ERRO FATAL (CRIADO A SEU PEDIDO)
+// ECRÃ DE ERRO FATAL 
 // ==========================================
 class CrashScreen extends StatelessWidget {
   final String errorMessage;
@@ -21,7 +22,7 @@ class CrashScreen extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: const Color(0xFF8B0000), // Vermelho escuro
+        backgroundColor: const Color(0xFF8B0000), 
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(20.0),
@@ -90,7 +91,6 @@ class AppText {
 }
 
 void main() {
-  // O SEGREDO ESTÁ AQUI: O detetor global de falhas
   PlatformDispatcher.instance.onError = (error, stack) {
     runApp(CrashScreen(errorMessage: error.toString()));
     return true;
@@ -687,7 +687,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
 }
 
 // ==========================================
-// TELA DO HISTÓRICO 
+// TELA DO HISTÓRICO
 // ==========================================
 class HistoryScreen extends StatefulWidget {
   final String lang;
@@ -764,7 +764,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// TELA 3: REPRODUTOR DE VÍDEO
+// TELA 3: REPRODUTOR DE VÍDEO (ESTÁVEL E SEM TRAVAMENTOS)
 // ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
