@@ -26,6 +26,8 @@ class AppText {
       'pt_desc': 'Inclui canais do Brasil, Portugal e desporto mundial.',
       'en_title': 'English Channels',
       'en_desc': 'International channels, news and world sports.',
+      'custom_title': 'Adicionar a Minha Lista',
+      'custom_desc': 'Tem uma lista M3U? Cole o link aqui.',
       'featured': 'Canais em Destaque',
       'others': 'Outros',
     },
@@ -40,6 +42,8 @@ class AppText {
       'pt_desc': 'Includes Brazil, Portugal and world sports.',
       'en_title': 'English Channels',
       'en_desc': 'International channels, news and world sports.',
+      'custom_title': 'Add My Own Playlist',
+      'custom_desc': 'Got an M3U URL? Paste it right here.',
       'featured': 'Featured Channels',
       'others': 'Others',
     }
@@ -54,7 +58,7 @@ void main() async {
   // INICIALIZA A MONETIZAÇÃO DA UNITY ADS
   UnityAds.init(
     gameId: '6079651',
-    testMode: false, // Está em FALSE, ou seja, vai gerar dinheiro real!
+    testMode: false, 
   );
   
   final prefs = await SharedPreferences.getInstance();
@@ -129,10 +133,10 @@ List<Channel> parseM3uData(String body) {
 IconData getCategoryIcon(String category) {
   final cat = category.toLowerCase();
   if (cat.contains('sport') || cat.contains('desporto') || cat.contains('futebol') || cat.contains('soccer')) return Icons.sports_soccer;
-  if (cat.contains('movie') || cat.contains('filme') || cat.contains('cinema')) return Icons.movie;
+  if (cat.contains('movie') || cat.contains('filme') || cat.contains('cinema') || cat.contains('vod')) return Icons.movie;
   if (cat.contains('news') || cat.contains('notícia') || cat.contains('journal')) return Icons.article;
   if (cat.contains('music') || cat.contains('música')) return Icons.music_note;
-  if (cat.contains('kid') || cat.contains('infantil') || cat.contains('cartoon')) return Icons.child_care;
+  if (cat.contains('kid') || cat.contains('infantil') || cat.contains('cartoon') || cat.contains('anime')) return Icons.child_care;
   if (cat.contains('doc') || cat.contains('nature')) return Icons.landscape;
   if (cat.contains('comedy') || cat.contains('comédia')) return Icons.sentiment_very_satisfied;
   if (cat.contains('serie') || cat.contains('série')) return Icons.live_tv;
@@ -140,7 +144,7 @@ IconData getCategoryIcon(String category) {
 }
 
 // ==========================================
-// TELA 1: SELEÇÃO DE IDIOMA PREMIUM
+// TELA 1: SELEÇÃO DE IDIOMA E IMPORTAR LISTA
 // ==========================================
 class PremiumLanguageScreen extends StatefulWidget {
   const PremiumLanguageScreen({super.key});
@@ -158,6 +162,73 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
     if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ChannelsScreen(lang: lang)));
   }
 
+  // FLUXO DIVERTIDO PARA IMPORTAR LISTA M3U
+  void _showCustomPlaylistDialog() {
+    final TextEditingController urlController = TextEditingController();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          top: 30, left: 25, right: 25
+        ),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(35), topRight: Radius.circular(35)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.grey[700], borderRadius: BorderRadius.circular(10))),
+            const SizedBox(height: 25),
+            const Icon(Icons.playlist_add_circle, size: 70, color: Color(0xFFE50914)),
+            const SizedBox(height: 15),
+            const Text("A Sua Própria TV", style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white)),
+            const SizedBox(height: 10),
+            const Text("Cole o link (URL) da sua lista M3U abaixo para carregar os seus conteúdos exclusivos.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 16)),
+            const SizedBox(height: 25),
+            TextField(
+              controller: urlController,
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+              decoration: InputDecoration(
+                hintText: "https://exemplo.com/lista.m3u",
+                hintStyle: const TextStyle(color: Colors.white30),
+                prefixIcon: const Icon(Icons.link, color: Colors.grey),
+                filled: true,
+                fillColor: Colors.black,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 25),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE50914),
+                minimumSize: const Size(double.infinity, 60),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                elevation: 5,
+              ),
+              onPressed: () async {
+                if(urlController.text.isNotEmpty) {
+                  Navigator.pop(ctx);
+                  setState(() => _isLoading = true);
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('user_lang', 'custom');
+                  await prefs.setString('custom_url', urlController.text.trim());
+                  if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ChannelsScreen(lang: 'custom')));
+                }
+              },
+              child: const Text("Carregar Lista", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -172,50 +243,55 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
         child: Center(
           child: _isLoading 
             ? const CircularProgressIndicator(color: Color(0xFFE50914))
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/logo.png', width: 140, errorBuilder: (c, e, s) => const Icon(Icons.live_tv, size: 100, color: Colors.white)),
-                  const SizedBox(height: 20),
-                  const Text("PlayTVNow", style: TextStyle(fontSize: 45, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
-                  const SizedBox(height: 50),
-                  Text(AppText.get('pt', 'choose_catalog'), style: const TextStyle(color: Colors.grey, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 30),
-                  _buildLangCard(AppText.get('pt', 'pt_title'), AppText.get('pt', 'pt_desc'), 'pt', Icons.flag),
-                  const SizedBox(height: 20),
-                  _buildLangCard(AppText.get('en', 'en_title'), AppText.get('en', 'en_desc'), 'en', Icons.public),
-                ],
+            : SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/logo.png', width: 140, errorBuilder: (c, e, s) => const Icon(Icons.live_tv, size: 100, color: Colors.white)),
+                    const SizedBox(height: 20),
+                    const Text("PlayTVNow", style: TextStyle(fontSize: 45, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
+                    const SizedBox(height: 50),
+                    Text(AppText.get('pt', 'choose_catalog'), style: const TextStyle(color: Colors.grey, fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 30),
+                    _buildLangCard(AppText.get('pt', 'pt_title'), AppText.get('pt', 'pt_desc'), 'pt', Icons.flag, false),
+                    const SizedBox(height: 15),
+                    _buildLangCard(AppText.get('en', 'en_title'), AppText.get('en', 'en_desc'), 'en', Icons.public, false),
+                    const SizedBox(height: 15),
+                    // NOVO BOTÃO: IMPORTAR LISTA M3U
+                    _buildLangCard(AppText.get('pt', 'custom_title'), AppText.get('pt', 'custom_desc'), 'custom', Icons.playlist_add_check_circle, true),
+                  ],
+                ),
               ),
         ),
       ),
     );
   }
 
-  Widget _buildLangCard(String title, String subtitle, String code, IconData icon) {
+  Widget _buildLangCard(String title, String subtitle, String code, IconData icon, bool isCustom) {
     return InkWell(
-      onTap: () => _selectLanguage(code),
+      onTap: isCustom ? _showCustomPlaylistDialog : () => _selectLanguage(code),
       borderRadius: BorderRadius.circular(15),
       child: Container(
         width: 350,
-        padding: const EdgeInsets.all(25),
+        padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          color: isCustom ? const Color(0xFFE50914).withOpacity(0.15) : Colors.white.withOpacity(0.05),
+          border: Border.all(color: isCustom ? const Color(0xFFE50914) : Colors.white.withOpacity(0.1)),
           borderRadius: BorderRadius.circular(15),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 45, color: Colors.white),
+            Icon(icon, size: 45, color: isCustom ? const Color(0xFFE50914) : Colors.white),
             const SizedBox(width: 20),
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(title, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isCustom ? Colors.white : Colors.white)),
                 const SizedBox(height: 5),
                 Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               ],
             )),
-            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 20),
+            Icon(isCustom ? Icons.add_circle : Icons.arrow_forward_ios, color: Colors.grey, size: 24),
           ],
         ),
       ),
@@ -224,7 +300,7 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
 }
 
 // ==========================================
-// TELA 2: CATÁLOGO DE CANAIS E CARROSSEL
+// TELA 2: CATÁLOGO DE CANAIS
 // ==========================================
 class ChannelsScreen extends StatefulWidget {
   final String lang;
@@ -245,23 +321,28 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   @override
   void initState() {
     super.initState();
-    selectedCategory = AppText.get(widget.lang, 'all');
+    selectedCategory = AppText.get(widget.lang == 'custom' ? 'pt' : widget.lang, 'all');
     _loadAllData();
-    
-    // CARREGA O ANÚNCIO INTERSTITIAL EM SEGUNDO PLANO
     UnityAds.load(placementId: 'Interstitial_Android');
   }
 
   Future<void> _loadAllData() async {
-    final langUrl = widget.lang == 'pt' 
-        ? "https://iptv-org.github.io/iptv/languages/por.m3u" 
-        : "https://iptv-org.github.io/iptv/languages/eng.m3u";
-    final sportsUrl = "https://iptv-org.github.io/iptv/categories/sports.m3u";
+    List<String> urlsToLoad = [];
+    
+    if (widget.lang == 'custom') {
+      // Carrega apenas a lista privada do usuário
+      final prefs = await SharedPreferences.getInstance();
+      final customUrl = prefs.getString('custom_url') ?? "";
+      if(customUrl.isNotEmpty) urlsToLoad.add(customUrl);
+    } else {
+      // Carrega catálogo global
+      urlsToLoad.add(widget.lang == 'pt' ? "https://iptv-org.github.io/iptv/languages/por.m3u" : "https://iptv-org.github.io/iptv/languages/eng.m3u");
+      urlsToLoad.add("https://iptv-org.github.io/iptv/categories/sports.m3u");
+    }
     
     try {
       List<Channel> tempList = [];
-      
-      for (String url in [langUrl, sportsUrl]) {
+      for (String url in urlsToLoad) {
         try {
           final request = await HttpClient().getUrl(Uri.parse(url));
           final response = await request.close();
@@ -272,8 +353,10 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       }
 
       final uniqueChannels = <String, Channel>{};
+      String txtLang = widget.lang == 'custom' ? 'pt' : widget.lang;
+      
       for (var c in tempList) {
-        String catName = c.category == "Others" ? AppText.get(widget.lang, 'others') : c.category;
+        String catName = c.category == "Others" ? AppText.get(txtLang, 'others') : c.category;
         uniqueChannels[c.url] = Channel(name: c.name, logo: c.logo, url: c.url, category: catName);
       }
       
@@ -291,7 +374,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
 
       setState(() {
         allChannels = finalChannels;
-        categories = [AppText.get(widget.lang, 'all'), ...sortedCats];
+        categories = [AppText.get(txtLang, 'all'), ...sortedCats];
         carouselChannels = randomCarousel;
         isLoading = false;
       });
@@ -301,8 +384,9 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   }
 
   List<Channel> get displayedChannels {
+    String txtLang = widget.lang == 'custom' ? 'pt' : widget.lang;
     List<Channel> list;
-    if (selectedCategory == AppText.get(widget.lang, 'all')) list = allChannels;
+    if (selectedCategory == AppText.get(txtLang, 'all')) list = allChannels;
     else list = allChannels.where((c) => c.category == selectedCategory).toList();
 
     if (searchQuery.isNotEmpty) {
@@ -313,6 +397,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    String txtLang = widget.lang == 'custom' ? 'pt' : widget.lang;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -327,27 +412,26 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.history, size: 30, color: Colors.white),
-            tooltip: AppText.get(widget.lang, 'history'),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HistoryScreen(lang: widget.lang))),
+            tooltip: AppText.get(txtLang, 'history'),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HistoryScreen(lang: txtLang))),
           ),
           IconButton(
             icon: const Icon(Icons.settings, size: 30, color: Colors.grey),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
               await prefs.remove('user_lang');
+              await prefs.remove('custom_url');
               if (context.mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PremiumLanguageScreen()));
             },
           )
         ],
       ),
-      // BANNER DA UNITY ADS FIXO NO FUNDO DO ECRÃ
+      // BANNER DA UNITY ADS FIXO
       bottomNavigationBar: Container(
         color: Colors.black,
         height: 50,
         width: double.infinity,
-        child: const UnityBannerAd(
-          placementId: 'Banner_Android',
-        ),
+        child: const UnityBannerAd(placementId: 'Banner_Android'),
       ),
       body: isLoading 
         ? Center(
@@ -356,7 +440,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
               children: [
                 const CircularProgressIndicator(color: Color(0xFFE50914)),
                 const SizedBox(height: 20),
-                Text(AppText.get(widget.lang, 'loading'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, color: Colors.grey)),
+                Text(AppText.get(txtLang, 'loading'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, color: Colors.grey)),
               ],
             )
           )
@@ -369,7 +453,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
               onChanged: (val) => setState(() => searchQuery = val),
               style: const TextStyle(color: Colors.white, fontSize: 18),
               decoration: InputDecoration(
-                hintText: AppText.get(widget.lang, 'search'),
+                hintText: AppText.get(txtLang, 'search'),
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 18),
                 prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 30),
                 filled: true,
@@ -402,7 +486,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(cat == AppText.get(widget.lang, 'all') ? Icons.view_module : getCategoryIcon(cat), 
+                        Icon(cat == AppText.get(txtLang, 'all') ? Icons.view_module : getCategoryIcon(cat), 
                              color: isSelected ? Colors.white : Colors.grey, size: 22),
                         const SizedBox(width: 8),
                         Text(cat, style: TextStyle(color: isSelected ? Colors.white : Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
@@ -424,7 +508,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                   if (searchQuery.isEmpty && carouselChannels.isNotEmpty) ...[
                     Padding(
                       padding: const EdgeInsets.only(left: 15, bottom: 10),
-                      child: Text(AppText.get(widget.lang, 'featured'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                      child: Text(AppText.get(txtLang, 'featured'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                     ),
                     SizedBox(
                       height: 180,
@@ -468,7 +552,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                   ],
 
                   displayedChannels.isEmpty
-                    ? Center(child: Padding(padding: const EdgeInsets.all(40), child: Text(AppText.get(widget.lang, 'no_channels'), style: const TextStyle(color: Colors.grey, fontSize: 18))))
+                    ? Center(child: Padding(padding: const EdgeInsets.all(40), child: Text(AppText.get(txtLang, 'no_channels'), style: const TextStyle(color: Colors.grey, fontSize: 18))))
                     : GridView.builder(
                         physics: const NeverScrollableScrollPhysics(),
                         shrinkWrap: true,
@@ -536,10 +620,8 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     await prefs.setString('watch_history', json.encode(hist.map((e) => e.toJson()).toList()));
     
     if (context.mounted) {
-      // Abre o reprodutor de vídeo
       await Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c)));
-      
-      // DEPOIS QUE ELE FECHAR O VÍDEO: MOSTRA O ANÚNCIO DE TELA INTEIRA E CARREGA O PRÓXIMO!
+      // ANÚNCIO DE TELA INTEIRA APÓS ASSISTIR
       UnityAds.showVideoAd(placementId: 'Interstitial_Android');
       UnityAds.load(placementId: 'Interstitial_Android');
     }
@@ -583,7 +665,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
         title: Text(AppText.get(widget.lang, 'history'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.black,
       ),
-      // BANNER NO HISTÓRICO TAMBÉM
       bottomNavigationBar: Container(
         color: Colors.black,
         height: 50,
@@ -623,7 +704,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// TELA 3: REPRODUTOR DE VÍDEO ESTÁVEL
+// TELA 3: REPRODUTOR DE VÍDEO
 // ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
