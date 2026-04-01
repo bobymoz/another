@@ -9,17 +9,13 @@ workflows:
       - name: Baixar pacotes do Flutter
         script: |
           flutter packages pub get
-      - name: Ajustar Android para a Unity Ads (MinSDK 21)
-        script: |
-          sed -i '' 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' android/app/build.gradle.kts || true
       - name: Gerar Ícone da Aplicação
         script: |
           flutter pub run flutter_launcher_icons
-      - name: Construir o APK e AAB (Sem Shrink para evitar Crashes)
+      - name: Construir o APK e AAB
         script: |
-          # A tag --no-shrink impede que o Android apague o motor de vídeo e a UnityAds!
-          flutter build apk --release --split-per-abi --no-shrink
-          flutter build appbundle --release --no-shrink
+          flutter build apk --release --split-per-abi
+          flutter build appbundle --release
       - name: Gerar Assinatura Digital e Assinar o APK
         script: |
           # 1. Cria a chave de segurança (Keystore) do PlayTVNow
