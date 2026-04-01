@@ -55,11 +55,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
   
-  // INICIALIZA A MONETIZAÇÃO DA UNITY ADS
-  UnityAds.init(
-    gameId: '6079651',
-    testMode: false, 
-  );
+  // ESCUDO ANTI-CRASH: Impede que a aplicação feche se os anúncios falharem
+  try {
+    await UnityAds.init(
+      gameId: '6079651',
+      testMode: false, 
+    );
+  } catch (e) {
+    debugPrint('Aviso: Unity Ads não iniciou, mas a app vai continuar!');
+  }
   
   final prefs = await SharedPreferences.getInstance();
   final String? lang = prefs.getString('user_lang');
@@ -162,7 +166,6 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
     if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ChannelsScreen(lang: lang)));
   }
 
-  // FLUXO DIVERTIDO PARA IMPORTAR LISTA M3U
   void _showCustomPlaylistDialog() {
     final TextEditingController urlController = TextEditingController();
     
@@ -257,7 +260,6 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
                     const SizedBox(height: 15),
                     _buildLangCard(AppText.get('en', 'en_title'), AppText.get('en', 'en_desc'), 'en', Icons.public, false),
                     const SizedBox(height: 15),
-                    // NOVO BOTÃO: IMPORTAR LISTA M3U
                     _buildLangCard(AppText.get('pt', 'custom_title'), AppText.get('pt', 'custom_desc'), 'custom', Icons.playlist_add_check_circle, true),
                   ],
                 ),
@@ -286,7 +288,7 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isCustom ? Colors.white : Colors.white)),
+                Text(title, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 5),
                 Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               ],
@@ -300,7 +302,7 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
 }
 
 // ==========================================
-// TELA 2: CATÁLOGO DE CANAIS
+// TELA 2: CATÁLOGO DE CANAIS E CARROSSEL
 // ==========================================
 class ChannelsScreen extends StatefulWidget {
   final String lang;
@@ -323,19 +325,19 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     super.initState();
     selectedCategory = AppText.get(widget.lang == 'custom' ? 'pt' : widget.lang, 'all');
     _loadAllData();
-    UnityAds.load(placementId: 'Interstitial_Android');
+    
+    // CARREGA ANÚNCIO DE TELA CHEIA EM BACKGROUND
+    try { UnityAds.load(placementId: 'Interstitial_Android'); } catch(e){}
   }
 
   Future<void> _loadAllData() async {
     List<String> urlsToLoad = [];
     
     if (widget.lang == 'custom') {
-      // Carrega apenas a lista privada do usuário
       final prefs = await SharedPreferences.getInstance();
       final customUrl = prefs.getString('custom_url') ?? "";
       if(customUrl.isNotEmpty) urlsToLoad.add(customUrl);
     } else {
-      // Carrega catálogo global
       urlsToLoad.add(widget.lang == 'pt' ? "https://iptv-org.github.io/iptv/languages/por.m3u" : "https://iptv-org.github.io/iptv/languages/eng.m3u");
       urlsToLoad.add("https://iptv-org.github.io/iptv/categories/sports.m3u");
     }
@@ -426,7 +428,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
           )
         ],
       ),
-      // BANNER DA UNITY ADS FIXO
+      // BANNER FIXO DA UNITY
       bottomNavigationBar: Container(
         color: Colors.black,
         height: 50,
@@ -621,15 +623,17 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     
     if (context.mounted) {
       await Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c)));
-      // ANÚNCIO DE TELA INTEIRA APÓS ASSISTIR
-      UnityAds.showVideoAd(placementId: 'Interstitial_Android');
-      UnityAds.load(placementId: 'Interstitial_Android');
+      // MOSTRA ANÚNCIO APÓS FECHAR O VÍDEO
+      try {
+        UnityAds.showVideoAd(placementId: 'Interstitial_Android');
+        UnityAds.load(placementId: 'Interstitial_Android');
+      } catch(e){}
     }
   }
 }
 
 // ==========================================
-// TELA DO HISTÓRICO 
+// TELA DO HISTÓRICO
 // ==========================================
 class HistoryScreen extends StatefulWidget {
   final String lang;
@@ -645,7 +649,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
     _loadHistory();
-    UnityAds.load(placementId: 'Interstitial_Android');
+    try { UnityAds.load(placementId: 'Interstitial_Android'); } catch(e){}
   }
 
   Future<void> _loadHistory() async {
@@ -692,8 +696,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     trailing: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
                     onTap: () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c)));
-                      UnityAds.showVideoAd(placementId: 'Interstitial_Android');
-                      UnityAds.load(placementId: 'Interstitial_Android');
+                      try {
+                        UnityAds.showVideoAd(placementId: 'Interstitial_Android');
+                        UnityAds.load(placementId: 'Interstitial_Android');
+                      } catch(e){}
                     },
                   ),
                 );
@@ -704,7 +710,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// TELA 3: REPRODUTOR DE VÍDEO
+// TELA 3: REPRODUTOR DE VÍDEO (ESTÁVEL E SEM TRAVAMENTOS)
 // ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
@@ -723,12 +729,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     
+    // Motor padrão para garantir que o mapa da transmissão carregue corretamente
     player = Player();
     controller = VideoController(player);
     
     player.open(
       Media(
         widget.channel.url,
+        // O DISFARCE: Impede os bloqueios de servidor
         httpHeaders: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': '*/*',
