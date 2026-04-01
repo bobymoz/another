@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+// MOTOR DE ANÚNCIOS DA UNITY
+import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
 // ==========================================
 // SISTEMA DE TRADUÇÃO TOTAL (INGLÊS / PORTUGUÊS)
@@ -48,6 +50,12 @@ class AppText {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  
+  // INICIALIZA A MONETIZAÇÃO DA UNITY ADS
+  UnityAds.init(
+    gameId: '6079651',
+    testMode: false, // Está em FALSE, ou seja, vai gerar dinheiro real!
+  );
   
   final prefs = await SharedPreferences.getInstance();
   final String? lang = prefs.getString('user_lang');
@@ -167,7 +175,6 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Usa o seu logótipo oficial da pasta assets
                   Image.asset('assets/logo.png', width: 140, errorBuilder: (c, e, s) => const Icon(Icons.live_tv, size: 100, color: Colors.white)),
                   const SizedBox(height: 20),
                   const Text("PlayTVNow", style: TextStyle(fontSize: 45, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
@@ -240,6 +247,9 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     super.initState();
     selectedCategory = AppText.get(widget.lang, 'all');
     _loadAllData();
+    
+    // CARREGA O ANÚNCIO INTERSTITIAL EM SEGUNDO PLANO
+    UnityAds.load(placementId: 'Interstitial_Android');
   }
 
   Future<void> _loadAllData() async {
@@ -309,7 +319,6 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         elevation: 0,
         title: Row(
           children: [
-            // Usa o seu logótipo oficial da pasta assets
             Image.asset('assets/logo.png', height: 35, errorBuilder: (_,__,___) => const Icon(Icons.tv, color: Color(0xFFE50914))),
             const SizedBox(width: 10),
             const Text('PlayTVNow', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: Colors.white)),
@@ -330,6 +339,15 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             },
           )
         ],
+      ),
+      // BANNER DA UNITY ADS FIXO NO FUNDO DO ECRÃ
+      bottomNavigationBar: Container(
+        color: Colors.black,
+        height: 50,
+        width: double.infinity,
+        child: const UnityBannerAd(
+          placementId: 'Banner_Android',
+        ),
       ),
       body: isLoading 
         ? Center(
@@ -517,12 +535,19 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     if (hist.length > 20) hist.removeLast();
     await prefs.setString('watch_history', json.encode(hist.map((e) => e.toJson()).toList()));
     
-    if (context.mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c)));
+    if (context.mounted) {
+      // Abre o reprodutor de vídeo
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c)));
+      
+      // DEPOIS QUE ELE FECHAR O VÍDEO: MOSTRA O ANÚNCIO DE TELA INTEIRA E CARREGA O PRÓXIMO!
+      UnityAds.showVideoAd(placementId: 'Interstitial_Android');
+      UnityAds.load(placementId: 'Interstitial_Android');
+    }
   }
 }
 
 // ==========================================
-// TELA DO HISTÓRICO
+// TELA DO HISTÓRICO 
 // ==========================================
 class HistoryScreen extends StatefulWidget {
   final String lang;
@@ -538,6 +563,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
     _loadHistory();
+    UnityAds.load(placementId: 'Interstitial_Android');
   }
 
   Future<void> _loadHistory() async {
@@ -556,6 +582,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(
         title: Text(AppText.get(widget.lang, 'history'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.black,
+      ),
+      // BANNER NO HISTÓRICO TAMBÉM
+      bottomNavigationBar: Container(
+        color: Colors.black,
+        height: 50,
+        width: double.infinity,
+        child: const UnityBannerAd(placementId: 'Banner_Android'),
       ),
       body: history.isEmpty 
           ? Center(child: Text(AppText.get(widget.lang, 'no_channels'), style: const TextStyle(color: Colors.grey, fontSize: 18)))
@@ -576,7 +609,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     title: Text(c.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     subtitle: Text(c.category, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
                     trailing: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c))),
+                    onTap: () async {
+                      await Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c)));
+                      UnityAds.showVideoAd(placementId: 'Interstitial_Android');
+                      UnityAds.load(placementId: 'Interstitial_Android');
+                    },
                   ),
                 );
               },
@@ -586,7 +623,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// TELA 3: REPRODUTOR DE VÍDEO (ESTÁVEL E SEM TRAVAMENTOS)
+// TELA 3: REPRODUTOR DE VÍDEO ESTÁVEL
 // ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
@@ -605,14 +642,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     
-    // Motor padrão para garantir que o mapa da transmissão carregue corretamente
     player = Player();
     controller = VideoController(player);
     
     player.open(
       Media(
         widget.channel.url,
-        // O DISFARCE: Impede os bloqueios de servidor
         httpHeaders: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': '*/*',
