@@ -9,15 +9,8 @@ workflows:
       - name: Baixar pacotes do Flutter
         script: |
           flutter packages pub get
-      - name: Gerar Ícone da Aplicação Oficial
+      - name: Gerar Ícone da Aplicação
         script: |
-          flutter pub add dev:flutter_launcher_icons
-          cat <<EOF >> pubspec.yaml
-          
-          flutter_launcher_icons:
-            android: true
-            image_path: "assets/logo.png"
-          EOF
           flutter pub run flutter_launcher_icons
       - name: Construir o APK Leve (Separado por arquitetura)
         script: |
