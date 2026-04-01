@@ -7,8 +7,46 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-// MOTOR DE ANÚNCIOS DA UNITY
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
+
+// ==========================================
+// ECRÃ DE ERRO FATAL (CRIADO A SEU PEDIDO)
+// ==========================================
+class CrashScreen extends StatelessWidget {
+  final String errorMessage;
+  const CrashScreen({super.key, required this.errorMessage});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF8B0000), // Vermelho escuro
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.warning_amber_rounded, size: 80, color: Colors.white),
+                const SizedBox(height: 20),
+                const Text("Ocorreu um Erro!", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 10),
+                const Text("Por favor, tire print desta tela:", style: TextStyle(fontSize: 16, color: Colors.white70)),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(10)),
+                  child: Text(errorMessage, style: const TextStyle(color: Colors.white, fontFamily: 'monospace')),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 // ==========================================
 // SISTEMA DE TRADUÇÃO TOTAL (INGLÊS / PORTUGUÊS)
@@ -51,24 +89,43 @@ class AppText {
   static String get(String lang, String key) => t[lang]?[key] ?? key;
 }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  MediaKit.ensureInitialized();
-  
-  // ESCUDO ANTI-CRASH: Impede que a aplicação feche se os anúncios falharem
-  try {
-    await UnityAds.init(
-      gameId: '6079651',
-      testMode: false, 
-    );
-  } catch (e) {
-    debugPrint('Aviso: Unity Ads não iniciou, mas a app vai continuar!');
-  }
-  
-  final prefs = await SharedPreferences.getInstance();
-  final String? lang = prefs.getString('user_lang');
-  
-  runApp(PlayTVNowApp(initialLang: lang));
+void main() {
+  // O SEGREDO ESTÁ AQUI: O detetor global de falhas
+  PlatformDispatcher.instance.onError = (error, stack) {
+    runApp(CrashScreen(errorMessage: error.toString()));
+    return true;
+  };
+
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    runApp(CrashScreen(errorMessage: details.exceptionAsString()));
+  };
+
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    try {
+      MediaKit.ensureInitialized();
+      
+      try {
+        await UnityAds.init(
+          gameId: '6079651',
+          testMode: false, 
+        );
+      } catch (e) {
+        debugPrint('Unity Init Error ignorado: $e');
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final String? lang = prefs.getString('user_lang');
+      
+      runApp(PlayTVNowApp(initialLang: lang));
+    } catch (e) {
+      runApp(CrashScreen(errorMessage: "Falha na inicialização principal:\n$e"));
+    }
+  }, (error, stack) {
+    runApp(CrashScreen(errorMessage: "Erro Assíncrono:\n$error"));
+  });
 }
 
 class PlayTVNowApp extends StatelessWidget {
@@ -326,7 +383,6 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     selectedCategory = AppText.get(widget.lang == 'custom' ? 'pt' : widget.lang, 'all');
     _loadAllData();
     
-    // CARREGA ANÚNCIO DE TELA CHEIA EM BACKGROUND
     try { UnityAds.load(placementId: 'Interstitial_Android'); } catch(e){}
   }
 
@@ -428,7 +484,6 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
           )
         ],
       ),
-      // BANNER FIXO DA UNITY
       bottomNavigationBar: Container(
         color: Colors.black,
         height: 50,
@@ -623,7 +678,6 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     
     if (context.mounted) {
       await Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c)));
-      // MOSTRA ANÚNCIO APÓS FECHAR O VÍDEO
       try {
         UnityAds.showVideoAd(placementId: 'Interstitial_Android');
         UnityAds.load(placementId: 'Interstitial_Android');
@@ -633,7 +687,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
 }
 
 // ==========================================
-// TELA DO HISTÓRICO
+// TELA DO HISTÓRICO 
 // ==========================================
 class HistoryScreen extends StatefulWidget {
   final String lang;
@@ -710,7 +764,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ==========================================
-// TELA 3: REPRODUTOR DE VÍDEO (ESTÁVEL E SEM TRAVAMENTOS)
+// TELA 3: REPRODUTOR DE VÍDEO
 // ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
@@ -729,14 +783,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight, DeviceOrientation.landscapeLeft]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     
-    // Motor padrão para garantir que o mapa da transmissão carregue corretamente
     player = Player();
     controller = VideoController(player);
     
     player.open(
       Media(
         widget.channel.url,
-        // O DISFARCE: Impede os bloqueios de servidor
         httpHeaders: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': '*/*',
