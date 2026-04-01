@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:async'; // A PEÇA QUE FALTAVA PARA O ESCUDO FUNCIONAR!
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -10,9 +10,6 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
-// ==========================================
-// ECRÃ DE ERRO FATAL 
-// ==========================================
 class CrashScreen extends StatelessWidget {
   final String errorMessage;
   const CrashScreen({super.key, required this.errorMessage});
@@ -49,9 +46,6 @@ class CrashScreen extends StatelessWidget {
   }
 }
 
-// ==========================================
-// SISTEMA DE TRADUÇÃO TOTAL (INGLÊS / PORTUGUÊS)
-// ==========================================
 class AppText {
   static const Map<String, Map<String, String>> t = {
     'pt': {
@@ -103,22 +97,10 @@ void main() {
 
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
-    
     try {
       MediaKit.ensureInitialized();
-      
-      try {
-        await UnityAds.init(
-          gameId: '6079651',
-          testMode: false, 
-        );
-      } catch (e) {
-        debugPrint('Unity Init Error ignorado: $e');
-      }
-
       final prefs = await SharedPreferences.getInstance();
       final String? lang = prefs.getString('user_lang');
-      
       runApp(PlayTVNowApp(initialLang: lang));
     } catch (e) {
       runApp(CrashScreen(errorMessage: "Falha na inicialização principal:\n$e"));
@@ -151,9 +133,6 @@ class PlayTVNowApp extends StatelessWidget {
   }
 }
 
-// ==========================================
-// MODELO DE DADOS E PROCESSAMENTO RÁPIDO
-// ==========================================
 class Channel {
   final String name;
   final String logo;
@@ -177,10 +156,8 @@ List<Channel> parseM3uData(String body) {
     if (line.startsWith('#EXTINF')) {
       final logoMatch = RegExp(r'tvg-logo="(.*?)"').firstMatch(line);
       cLogo = logoMatch != null ? logoMatch.group(1) ?? "" : "";
-      
       final groupMatch = RegExp(r'group-title="(.*?)"').firstMatch(line);
       cCategory = groupMatch != null && groupMatch.group(1)!.isNotEmpty ? groupMatch.group(1)! : "Others";
-      
       final parts = line.split(',');
       if (parts.length > 1) cName = parts.last.trim();
     } else if (line.startsWith('http')) {
@@ -204,9 +181,6 @@ IconData getCategoryIcon(String category) {
   return Icons.tv;
 }
 
-// ==========================================
-// TELA 1: SELEÇÃO DE IDIOMA E IMPORTAR LISTA
-// ==========================================
 class PremiumLanguageScreen extends StatefulWidget {
   const PremiumLanguageScreen({super.key});
   @override
@@ -215,6 +189,19 @@ class PremiumLanguageScreen extends StatefulWidget {
 
 class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAdsSafely();
+  }
+
+  // A Unity Ads agora é chamada aqui, de forma segura
+  void _initAdsSafely() async {
+    try {
+      await UnityAds.init(gameId: '6079651', testMode: false);
+    } catch(e) {}
+  }
 
   void _selectLanguage(String lang) async {
     setState(() => _isLoading = true);
@@ -225,20 +212,13 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
 
   void _showCustomPlaylistDialog() {
     final TextEditingController urlController = TextEditingController();
-    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          top: 30, left: 25, right: 25
-        ),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(35), topRight: Radius.circular(35)),
-        ),
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, top: 30, left: 25, right: 25),
+        decoration: const BoxDecoration(color: Color(0xFF1A1A1A), borderRadius: BorderRadius.only(topLeft: Radius.circular(35), topRight: Radius.circular(35))),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -257,19 +237,13 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
                 hintText: "https://exemplo.com/lista.m3u",
                 hintStyle: const TextStyle(color: Colors.white30),
                 prefixIcon: const Icon(Icons.link, color: Colors.grey),
-                filled: true,
-                fillColor: Colors.black,
+                filled: true, fillColor: Colors.black,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 25),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE50914),
-                minimumSize: const Size(double.infinity, 60),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                elevation: 5,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914), minimumSize: const Size(double.infinity, 60), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), elevation: 5),
               onPressed: () async {
                 if(urlController.text.isNotEmpty) {
                   Navigator.pop(ctx);
@@ -294,11 +268,7 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0F0F0F), Color(0xFF1A1A1A), Color(0xFF4A0000)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: LinearGradient(colors: [Color(0xFF0F0F0F), Color(0xFF1A1A1A), Color(0xFF4A0000)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         ),
         child: Center(
           child: _isLoading 
@@ -358,9 +328,6 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
   }
 }
 
-// ==========================================
-// TELA 2: CATÁLOGO DE CANAIS E CARROSSEL
-// ==========================================
 class ChannelsScreen extends StatefulWidget {
   final String lang;
   const ChannelsScreen({super.key, required this.lang});
@@ -382,13 +349,19 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     super.initState();
     selectedCategory = AppText.get(widget.lang == 'custom' ? 'pt' : widget.lang, 'all');
     _loadAllData();
-    
-    try { UnityAds.load(placementId: 'Interstitial_Android'); } catch(e){}
+    _initAndLoadAds();
+  }
+
+  // Inicializa a Unity e já prepara o anúncio de tela cheia
+  void _initAndLoadAds() async {
+    try {
+      await UnityAds.init(gameId: '6079651', testMode: false);
+      UnityAds.load(placementId: 'Interstitial_Android');
+    } catch(e){}
   }
 
   Future<void> _loadAllData() async {
     List<String> urlsToLoad = [];
-    
     if (widget.lang == 'custom') {
       final prefs = await SharedPreferences.getInstance();
       final customUrl = prefs.getString('custom_url') ?? "";
@@ -686,9 +659,6 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   }
 }
 
-// ==========================================
-// TELA DO HISTÓRICO
-// ==========================================
 class HistoryScreen extends StatefulWidget {
   final String lang;
   const HistoryScreen({super.key, required this.lang});
@@ -763,9 +733,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 }
 
-// ==========================================
-// TELA 3: REPRODUTOR DE VÍDEO (ESTÁVEL E SEM TRAVAMENTOS)
-// ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
   const PlayerScreen({super.key, required this.channel});
