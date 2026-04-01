@@ -1,5 +1,5 @@
 name: another_iptv_player
-description: PlayTVNow
+description: PlayTVNow Premium App
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -8,6 +8,8 @@ environment:
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
   shared_preferences: ^2.2.2
   media_kit: ^1.1.10+1
@@ -27,5 +29,7 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  # A CHAVE MÁGICA QUE RESOLVE O ERRO:
+  generate: true
   assets:
     - assets/logo.png
