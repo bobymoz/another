@@ -10,6 +10,9 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:unity_ads_plugin/unity_ads_plugin.dart';
 
+// ==========================================
+// ECRÃ DE ERRO FATAL (ANTI-CRASH)
+// ==========================================
 class CrashScreen extends StatelessWidget {
   final String errorMessage;
   const CrashScreen({super.key, required this.errorMessage});
@@ -29,8 +32,6 @@ class CrashScreen extends StatelessWidget {
                 const Icon(Icons.warning_amber_rounded, size: 80, color: Colors.white),
                 const SizedBox(height: 20),
                 const Text("Ocorreu um Erro!", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 10),
-                const Text("Por favor, tire print desta tela:", style: TextStyle(fontSize: 16, color: Colors.white70)),
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.all(15),
@@ -46,39 +47,48 @@ class CrashScreen extends StatelessWidget {
   }
 }
 
+// ==========================================
+// SISTEMA DE TRADUÇÃO INTELIGENTE
+// ==========================================
 class AppText {
   static const Map<String, Map<String, String>> t = {
     'pt': {
-      'loading': 'A preparar os canais...\nPor favor, aguarde.',
+      'welcome': 'Bem-vindo',
+      'select_lang': 'Selecione o idioma da aplicação',
+      'choose_source': 'Escolha o seu entretenimento',
+      'public_tv': 'Televisão Pública',
+      'public_desc': 'Canais de TV ao vivo, notícias e desporto.',
+      'my_list': 'A Minha Lista (M3U)',
+      'my_list_desc': 'Importe os seus canais colando um link.',
+      'loading': 'A sintonizar os canais...\nPor favor, aguarde.',
       'search': 'Pesquisar canais e filmes...',
       'history': 'O Seu Histórico',
       'all': 'Todos os Canais',
       'no_channels': 'Nenhum canal encontrado.',
-      'choose_catalog': 'ESCOLHA O SEU CATÁLOGO',
-      'pt_title': 'Canais em Português',
-      'pt_desc': 'Inclui canais do Brasil, Portugal e desporto mundial.',
-      'en_title': 'English Channels',
-      'en_desc': 'International channels, news and world sports.',
-      'custom_title': 'Adicionar a Minha Lista',
-      'custom_desc': 'Tem uma lista M3U? Cole o link aqui.',
       'featured': 'Canais em Destaque',
       'others': 'Outros',
+      'paste_link': 'Cole o link (URL) da sua lista M3U abaixo.',
+      'load_list': 'Carregar Lista',
+      'change_lang': 'Mudar Idioma',
     },
     'en': {
-      'loading': 'Loading channels...\nPlease wait.',
+      'welcome': 'Welcome',
+      'select_lang': 'Select the application language',
+      'choose_source': 'Choose your entertainment',
+      'public_tv': 'Public Television',
+      'public_desc': 'Free live TV channels, news and sports.',
+      'my_list': 'My Playlist (M3U)',
+      'my_list_desc': 'Import your channels by pasting a link.',
+      'loading': 'Tuning channels...\nPlease wait.',
       'search': 'Search channels and movies...',
       'history': 'Your Watch History',
       'all': 'All Channels',
       'no_channels': 'No channels found.',
-      'choose_catalog': 'CHOOSE YOUR CATALOG',
-      'pt_title': 'Portuguese Channels',
-      'pt_desc': 'Includes Brazil, Portugal and world sports.',
-      'en_title': 'English Channels',
-      'en_desc': 'International channels, news and world sports.',
-      'custom_title': 'Add My Own Playlist',
-      'custom_desc': 'Got an M3U URL? Paste it right here.',
       'featured': 'Featured Channels',
       'others': 'Others',
+      'paste_link': 'Paste your M3U playlist URL below.',
+      'load_list': 'Load Playlist',
+      'change_lang': 'Change Language',
     }
   };
   static String get(String lang, String key) => t[lang]?[key] ?? key;
@@ -89,7 +99,6 @@ void main() {
     runApp(CrashScreen(errorMessage: error.toString()));
     return true;
   };
-
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     runApp(CrashScreen(errorMessage: details.exceptionAsString()));
@@ -99,20 +108,37 @@ void main() {
     WidgetsFlutterBinding.ensureInitialized();
     try {
       MediaKit.ensureInitialized();
+      try {
+        await UnityAds.init(gameId: '6079651', testMode: false);
+      } catch (e) {
+        debugPrint('Unity Init Error: $e');
+      }
+
       final prefs = await SharedPreferences.getInstance();
-      final String? lang = prefs.getString('user_lang');
-      runApp(PlayTVNowApp(initialLang: lang));
+      final String? appLang = prefs.getString('app_lang');
+      final String? sourceType = prefs.getString('source_type');
+      
+      Widget initialScreen;
+      if (appLang == null) {
+        initialScreen = const LanguageScreen();
+      } else if (sourceType == null) {
+        initialScreen = SourceScreen(lang: appLang);
+      } else {
+        initialScreen = ChannelsScreen(lang: appLang, sourceType: sourceType);
+      }
+      
+      runApp(PlayTVNowApp(initialScreen: initialScreen));
     } catch (e) {
-      runApp(CrashScreen(errorMessage: "Falha na inicialização principal:\n$e"));
+      runApp(CrashScreen(errorMessage: "Fatal Error:\n$e"));
     }
   }, (error, stack) {
-    runApp(CrashScreen(errorMessage: "Erro Assíncrono:\n$error"));
+    runApp(CrashScreen(errorMessage: "Async Error:\n$error"));
   });
 }
 
 class PlayTVNowApp extends StatelessWidget {
-  final String? initialLang;
-  const PlayTVNowApp({super.key, this.initialLang});
+  final Widget initialScreen;
+  const PlayTVNowApp({super.key, required this.initialScreen});
 
   @override
   Widget build(BuildContext context) {
@@ -128,30 +154,25 @@ class PlayTVNowApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: initialLang == null ? const PremiumLanguageScreen() : ChannelsScreen(lang: initialLang!),
+      home: initialScreen,
     );
   }
 }
 
+// ==========================================
+// ESTRUTURA DE DADOS
+// ==========================================
 class Channel {
-  final String name;
-  final String logo;
-  final String url;
-  final String category;
-
+  final String name, logo, url, category;
   Channel({required this.name, required this.logo, required this.url, required this.category});
-
   Map<String, dynamic> toJson() => {'name': name, 'logo': logo, 'url': url, 'category': category};
-  factory Channel.fromJson(Map<String, dynamic> json) => 
-      Channel(name: json['name'], logo: json['logo'], url: json['url'], category: json['category']);
+  factory Channel.fromJson(Map<String, dynamic> json) => Channel(name: json['name'], logo: json['logo'], url: json['url'], category: json['category']);
 }
 
 List<Channel> parseM3uData(String body) {
   List<Channel> parsed = [];
   String cName = "Unknown", cLogo = "", cCategory = "Others";
-  
-  final lines = body.split('\n');
-  for (var line in lines) {
+  for (var line in body.split('\n')) {
     line = line.trim();
     if (line.startsWith('#EXTINF')) {
       final logoMatch = RegExp(r'tvg-logo="(.*?)"').firstMatch(line);
@@ -181,41 +202,98 @@ IconData getCategoryIcon(String category) {
   return Icons.tv;
 }
 
-class PremiumLanguageScreen extends StatefulWidget {
-  const PremiumLanguageScreen({super.key});
+// ==========================================
+// PASSO 1: ESCOLHER A LÍNGUA
+// ==========================================
+class LanguageScreen extends StatelessWidget {
+  const LanguageScreen({super.key});
+
+  void _setLanguage(BuildContext context, String lang) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_lang', lang);
+    if (context.mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SourceScreen(lang: lang)));
+  }
+
   @override
-  State<PremiumLanguageScreen> createState() => _PremiumLanguageScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(colors: [Color(0xFF0F0F0F), Color(0xFF1A1A1A), Color(0xFF4A0000)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/logo.png', width: 140, errorBuilder: (c, e, s) => const Icon(Icons.language, size: 100, color: Colors.white)),
+              const SizedBox(height: 20),
+              const Text("PlayTVNow", style: TextStyle(fontSize: 45, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
+              const SizedBox(height: 40),
+              const Text("Select your Language / Selecione o Idioma", style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 30),
+              _LangButton(title: "English", icon: Icons.public, onTap: () => _setLanguage(context, 'en')),
+              const SizedBox(height: 20),
+              _LangButton(title: "Português", icon: Icons.flag, onTap: () => _setLanguage(context, 'pt')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
-  bool _isLoading = false;
+class _LangButton extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+  const _LangButton({required this.title, required this.icon, required this.onTap});
 
   @override
-  void initState() {
-    super.initState();
-    _initAdsSafely();
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        width: 320, padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 30, color: Colors.white),
+            const SizedBox(width: 15),
+            Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+          ],
+        ),
+      ),
+    );
   }
+}
 
-  // A Unity Ads agora é chamada aqui, de forma segura
-  void _initAdsSafely() async {
-    try {
-      await UnityAds.init(gameId: '6079651', testMode: false);
-    } catch(e) {}
-  }
+// ==========================================
+// PASSO 2: ESCOLHER A FONTE (CANAIS PÚBLICOS OU LISTA PRÓPRIA)
+// ==========================================
+class SourceScreen extends StatefulWidget {
+  final String lang;
+  const SourceScreen({super.key, required this.lang});
+  @override
+  State<SourceScreen> createState() => _SourceScreenState();
+}
 
-  void _selectLanguage(String lang) async {
-    setState(() => _isLoading = true);
+class _SourceScreenState extends State<SourceScreen> {
+  void _setSource(String type) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_lang', lang);
-    if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ChannelsScreen(lang: lang)));
+    await prefs.setString('source_type', type);
+    if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ChannelsScreen(lang: widget.lang, sourceType: type)));
   }
 
-  void _showCustomPlaylistDialog() {
+  void _showCustomDialog() {
     final TextEditingController urlController = TextEditingController();
     showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, top: 30, left: 25, right: 25),
         decoration: const BoxDecoration(color: Color(0xFF1A1A1A), borderRadius: BorderRadius.only(topLeft: Radius.circular(35), topRight: Radius.circular(35))),
@@ -226,35 +304,29 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
             const SizedBox(height: 25),
             const Icon(Icons.playlist_add_circle, size: 70, color: Color(0xFFE50914)),
             const SizedBox(height: 15),
-            const Text("A Sua Própria TV", style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white)),
+            Text(AppText.get(widget.lang, 'my_list'), style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white)),
             const SizedBox(height: 10),
-            const Text("Cole o link (URL) da sua lista M3U abaixo para carregar os seus conteúdos exclusivos.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 16)),
+            Text(AppText.get(widget.lang, 'paste_link'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 16)),
             const SizedBox(height: 25),
             TextField(
-              controller: urlController,
-              style: const TextStyle(color: Colors.white, fontSize: 18),
+              controller: urlController, style: const TextStyle(color: Colors.white, fontSize: 18),
               decoration: InputDecoration(
-                hintText: "https://exemplo.com/lista.m3u",
-                hintStyle: const TextStyle(color: Colors.white30),
-                prefixIcon: const Icon(Icons.link, color: Colors.grey),
-                filled: true, fillColor: Colors.black,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                hintText: "https://.../lista.m3u", hintStyle: const TextStyle(color: Colors.white30), prefixIcon: const Icon(Icons.link, color: Colors.grey),
+                filled: true, fillColor: Colors.black, border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 25),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914), minimumSize: const Size(double.infinity, 60), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), elevation: 5),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE50914), minimumSize: const Size(double.infinity, 60), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
               onPressed: () async {
                 if(urlController.text.isNotEmpty) {
                   Navigator.pop(ctx);
-                  setState(() => _isLoading = true);
                   final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('user_lang', 'custom');
                   await prefs.setString('custom_url', urlController.text.trim());
-                  if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ChannelsScreen(lang: 'custom')));
+                  _setSource('custom');
                 }
               },
-              child: const Text("Carregar Lista", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+              child: Text(AppText.get(widget.lang, 'load_list'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
             ),
             const SizedBox(height: 40),
           ],
@@ -271,38 +343,30 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
           gradient: LinearGradient(colors: [Color(0xFF0F0F0F), Color(0xFF1A1A1A), Color(0xFF4A0000)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         ),
         child: Center(
-          child: _isLoading 
-            ? const CircularProgressIndicator(color: Color(0xFFE50914))
-            : SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset('assets/logo.png', width: 140, errorBuilder: (c, e, s) => const Icon(Icons.live_tv, size: 100, color: Colors.white)),
-                    const SizedBox(height: 20),
-                    const Text("PlayTVNow", style: TextStyle(fontSize: 45, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
-                    const SizedBox(height: 50),
-                    Text(AppText.get('pt', 'choose_catalog'), style: const TextStyle(color: Colors.grey, fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 30),
-                    _buildLangCard(AppText.get('pt', 'pt_title'), AppText.get('pt', 'pt_desc'), 'pt', Icons.flag, false),
-                    const SizedBox(height: 15),
-                    _buildLangCard(AppText.get('en', 'en_title'), AppText.get('en', 'en_desc'), 'en', Icons.public, false),
-                    const SizedBox(height: 15),
-                    _buildLangCard(AppText.get('pt', 'custom_title'), AppText.get('pt', 'custom_desc'), 'custom', Icons.playlist_add_check_circle, true),
-                  ],
-                ),
-              ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/logo.png', width: 140, errorBuilder: (c, e, s) => const Icon(Icons.live_tv, size: 100, color: Colors.white)),
+                const SizedBox(height: 40),
+                Text(AppText.get(widget.lang, 'choose_source'), style: const TextStyle(color: Colors.grey, fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 30),
+                _buildSourceCard(AppText.get(widget.lang, 'public_tv'), AppText.get(widget.lang, 'public_desc'), Icons.tv, () => _setSource('public'), false),
+                const SizedBox(height: 15),
+                _buildSourceCard(AppText.get(widget.lang, 'my_list'), AppText.get(widget.lang, 'my_list_desc'), Icons.playlist_add_check_circle, _showCustomDialog, true),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildLangCard(String title, String subtitle, String code, IconData icon, bool isCustom) {
+  Widget _buildSourceCard(String title, String subtitle, IconData icon, VoidCallback onTap, bool isCustom) {
     return InkWell(
-      onTap: isCustom ? _showCustomPlaylistDialog : () => _selectLanguage(code),
-      borderRadius: BorderRadius.circular(15),
+      onTap: onTap, borderRadius: BorderRadius.circular(15),
       child: Container(
-        width: 350,
-        padding: const EdgeInsets.all(22),
+        width: 350, padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           color: isCustom ? const Color(0xFFE50914).withOpacity(0.15) : Colors.white.withOpacity(0.05),
           border: Border.all(color: isCustom ? const Color(0xFFE50914) : Colors.white.withOpacity(0.1)),
@@ -315,12 +379,12 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 5),
                 Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               ],
             )),
-            Icon(isCustom ? Icons.add_circle : Icons.arrow_forward_ios, color: Colors.grey, size: 24),
+            Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 24),
           ],
         ),
       ),
@@ -328,9 +392,13 @@ class _PremiumLanguageScreenState extends State<PremiumLanguageScreen> {
   }
 }
 
+// ==========================================
+// TELA 3: CATÁLOGO DE CANAIS E CARROSSEL
+// ==========================================
 class ChannelsScreen extends StatefulWidget {
   final String lang;
-  const ChannelsScreen({super.key, required this.lang});
+  final String sourceType;
+  const ChannelsScreen({super.key, required this.lang, required this.sourceType});
   @override
   State<ChannelsScreen> createState() => _ChannelsScreenState();
 }
@@ -339,7 +407,6 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   List<Channel> allChannels = [];
   List<Channel> carouselChannels = [];
   List<String> categories = [];
-  
   late String selectedCategory;
   String searchQuery = '';
   bool isLoading = true;
@@ -347,22 +414,14 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   @override
   void initState() {
     super.initState();
-    selectedCategory = AppText.get(widget.lang == 'custom' ? 'pt' : widget.lang, 'all');
+    selectedCategory = AppText.get(widget.lang, 'all');
     _loadAllData();
-    _initAndLoadAds();
-  }
-
-  // Inicializa a Unity e já prepara o anúncio de tela cheia
-  void _initAndLoadAds() async {
-    try {
-      await UnityAds.init(gameId: '6079651', testMode: false);
-      UnityAds.load(placementId: 'Interstitial_Android');
-    } catch(e){}
+    try { UnityAds.load(placementId: 'Interstitial_Android'); } catch(e){}
   }
 
   Future<void> _loadAllData() async {
     List<String> urlsToLoad = [];
-    if (widget.lang == 'custom') {
+    if (widget.sourceType == 'custom') {
       final prefs = await SharedPreferences.getInstance();
       final customUrl = prefs.getString('custom_url') ?? "";
       if(customUrl.isNotEmpty) urlsToLoad.add(customUrl);
@@ -384,10 +443,8 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       }
 
       final uniqueChannels = <String, Channel>{};
-      String txtLang = widget.lang == 'custom' ? 'pt' : widget.lang;
-      
       for (var c in tempList) {
-        String catName = c.category == "Others" ? AppText.get(txtLang, 'others') : c.category;
+        String catName = c.category == "Others" ? AppText.get(widget.lang, 'others') : c.category;
         uniqueChannels[c.url] = Channel(name: c.name, logo: c.logo, url: c.url, category: catName);
       }
       
@@ -405,7 +462,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
 
       setState(() {
         allChannels = finalChannels;
-        categories = [AppText.get(txtLang, 'all'), ...sortedCats];
+        categories = [AppText.get(widget.lang, 'all'), ...sortedCats];
         carouselChannels = randomCarousel;
         isLoading = false;
       });
@@ -415,20 +472,15 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   }
 
   List<Channel> get displayedChannels {
-    String txtLang = widget.lang == 'custom' ? 'pt' : widget.lang;
     List<Channel> list;
-    if (selectedCategory == AppText.get(txtLang, 'all')) list = allChannels;
+    if (selectedCategory == AppText.get(widget.lang, 'all')) list = allChannels;
     else list = allChannels.where((c) => c.category == selectedCategory).toList();
-
-    if (searchQuery.isNotEmpty) {
-      list = list.where((c) => c.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
-    }
+    if (searchQuery.isNotEmpty) list = list.where((c) => c.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
     return list;
   }
 
   @override
   Widget build(BuildContext context) {
-    String txtLang = widget.lang == 'custom' ? 'pt' : widget.lang;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -443,25 +495,29 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.history, size: 30, color: Colors.white),
-            tooltip: AppText.get(txtLang, 'history'),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HistoryScreen(lang: txtLang))),
+            tooltip: AppText.get(widget.lang, 'history'),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HistoryScreen(lang: widget.lang))),
           ),
           IconButton(
             icon: const Icon(Icons.settings, size: 30, color: Colors.grey),
+            tooltip: AppText.get(widget.lang, 'change_lang'),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('user_lang');
-              await prefs.remove('custom_url');
-              if (context.mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PremiumLanguageScreen()));
+              await prefs.clear(); // Limpa tudo para o utilizador poder reconfigurar
+              if (context.mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LanguageScreen()));
             },
           )
         ],
       ),
-      bottomNavigationBar: Container(
-        color: Colors.black,
-        height: 50,
-        width: double.infinity,
-        child: const UnityBannerAd(placementId: 'Banner_Android'),
+      // BANNER CORRIGIDO: Envolvido num SafeArea e com alinhamento explícito para forçar a renderização
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          alignment: Alignment.center,
+          color: Colors.black,
+          height: 50,
+          width: double.infinity,
+          child: const UnityBannerAd(placementId: 'Banner_Android'),
+        ),
       ),
       body: isLoading 
         ? Center(
@@ -470,7 +526,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
               children: [
                 const CircularProgressIndicator(color: Color(0xFFE50914)),
                 const SizedBox(height: 20),
-                Text(AppText.get(txtLang, 'loading'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, color: Colors.grey)),
+                Text(AppText.get(widget.lang, 'loading'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, color: Colors.grey)),
               ],
             )
           )
@@ -483,13 +539,8 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
               onChanged: (val) => setState(() => searchQuery = val),
               style: const TextStyle(color: Colors.white, fontSize: 18),
               decoration: InputDecoration(
-                hintText: AppText.get(txtLang, 'search'),
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 18),
-                prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 30),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.1),
-                contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                hintText: AppText.get(widget.lang, 'search'), hintStyle: const TextStyle(color: Colors.grey, fontSize: 18), prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 30),
+                filled: true, fillColor: Colors.white.withOpacity(0.1), contentPadding: const EdgeInsets.symmetric(vertical: 15), border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
               ),
             ),
           ),
@@ -497,27 +548,18 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
           SizedBox(
             height: 55,
             child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              itemCount: categories.length,
+              scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 10), itemCount: categories.length,
               itemBuilder: (context, index) {
                 final cat = categories[index];
                 final isSelected = cat == selectedCategory;
-                
                 return GestureDetector(
                   onTap: () => setState(() => selectedCategory = cat),
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE50914) : const Color(0xFF2A2A2A),
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: isSelected ? [const BoxShadow(color: Colors.redAccent, blurRadius: 8)] : [],
-                    ),
+                    margin: const EdgeInsets.symmetric(horizontal: 6), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(color: isSelected ? const Color(0xFFE50914) : const Color(0xFF2A2A2A), borderRadius: BorderRadius.circular(25), boxShadow: isSelected ? [const BoxShadow(color: Colors.redAccent, blurRadius: 8)] : []),
                     child: Row(
                       children: [
-                        Icon(cat == AppText.get(txtLang, 'all') ? Icons.view_module : getCategoryIcon(cat), 
-                             color: isSelected ? Colors.white : Colors.grey, size: 22),
+                        Icon(cat == AppText.get(widget.lang, 'all') ? Icons.view_module : getCategoryIcon(cat), color: isSelected ? Colors.white : Colors.grey, size: 22),
                         const SizedBox(width: 8),
                         Text(cat, style: TextStyle(color: isSelected ? Colors.white : Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
                       ],
@@ -536,31 +578,20 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (searchQuery.isEmpty && carouselChannels.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(left: 15, bottom: 10),
-                      child: Text(AppText.get(txtLang, 'featured'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
+                    Padding(padding: const EdgeInsets.only(left: 15, bottom: 10), child: Text(AppText.get(widget.lang, 'featured'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white))),
                     SizedBox(
                       height: 180,
                       child: PageView.builder(
-                        itemCount: carouselChannels.length,
-                        controller: PageController(viewportFraction: 0.85),
+                        itemCount: carouselChannels.length, controller: PageController(viewportFraction: 0.85),
                         itemBuilder: (context, index) {
                           final c = carouselChannels[index];
                           return InkWell(
                             onTap: () => _openPlayer(context, c),
                             child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 10),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                gradient: const LinearGradient(colors: [Color(0xFFE50914), Color(0xFF4A0000)]),
-                              ),
+                              margin: const EdgeInsets.symmetric(horizontal: 10), decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Color(0xFFE50914), Color(0xFF4A0000)])),
                               child: Stack(
                                 children: [
-                                  Positioned(
-                                    right: -20, bottom: -20,
-                                    child: Icon(getCategoryIcon(c.category), size: 150, color: Colors.white.withOpacity(0.1)),
-                                  ),
+                                  Positioned(right: -20, bottom: -20, child: Icon(getCategoryIcon(c.category), size: 150, color: Colors.white.withOpacity(0.1))),
                                   Center(
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
@@ -582,48 +613,22 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                   ],
 
                   displayedChannels.isEmpty
-                    ? Center(child: Padding(padding: const EdgeInsets.all(40), child: Text(AppText.get(txtLang, 'no_channels'), style: const TextStyle(color: Colors.grey, fontSize: 18))))
+                    ? Center(child: Padding(padding: const EdgeInsets.all(40), child: Text(AppText.get(widget.lang, 'no_channels'), style: const TextStyle(color: Colors.grey, fontSize: 18))))
                     : GridView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        padding: const EdgeInsets.symmetric(horizontal: 15),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3, 
-                          crossAxisSpacing: 12, 
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.80
-                        ),
+                        physics: const NeverScrollableScrollPhysics(), shrinkWrap: true, padding: const EdgeInsets.symmetric(horizontal: 15),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.80),
                         itemCount: displayedChannels.length,
                         itemBuilder: (context, index) {
                           final c = displayedChannels[index];
                           return InkWell(
-                            onTap: () => _openPlayer(context, c),
-                            borderRadius: BorderRadius.circular(15),
+                            onTap: () => _openPlayer(context, c), borderRadius: BorderRadius.circular(15),
                             child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1E1E1E),
-                                borderRadius: BorderRadius.circular(15),
-                              ),
+                              decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(15)),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12.0),
-                                      child: c.logo.isNotEmpty 
-                                        ? Image.network(c.logo, errorBuilder: (_,__,___) => Icon(getCategoryIcon(c.category), size: 50, color: Colors.grey))
-                                        : Icon(getCategoryIcon(c.category), size: 50, color: Colors.grey),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 5),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF2A2A2A),
-                                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(15), bottomRight: Radius.circular(15))
-                                    ),
-                                    child: Text(c.name, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                  ),
+                                  Expanded(child: Padding(padding: const EdgeInsets.all(12.0), child: c.logo.isNotEmpty ? Image.network(c.logo, errorBuilder: (_,__,___) => Icon(getCategoryIcon(c.category), size: 50, color: Colors.grey)) : Icon(getCategoryIcon(c.category), size: 50, color: Colors.grey))),
+                                  Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 5), decoration: const BoxDecoration(color: Color(0xFF2A2A2A), borderRadius: BorderRadius.only(bottomLeft: Radius.circular(15), bottomRight: Radius.circular(15))), child: Text(c.name, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold))),
                                 ],
                               ),
                             ),
@@ -659,6 +664,9 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   }
 }
 
+// ==========================================
+// TELA DO HISTÓRICO
+// ==========================================
 class HistoryScreen extends StatefulWidget {
   final String lang;
   const HistoryScreen({super.key, required this.lang});
@@ -680,50 +688,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final prefs = await SharedPreferences.getInstance();
     final String? histStr = prefs.getString('watch_history');
     if (histStr != null) {
-      setState(() {
-        history = (json.decode(histStr) as List).map((i) => Channel.fromJson(i)).toList();
-      });
+      setState(() { history = (json.decode(histStr) as List).map((i) => Channel.fromJson(i)).toList(); });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppText.get(widget.lang, 'history'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.black,
-      ),
-      bottomNavigationBar: Container(
-        color: Colors.black,
-        height: 50,
-        width: double.infinity,
-        child: const UnityBannerAd(placementId: 'Banner_Android'),
-      ),
+      appBar: AppBar(title: Text(AppText.get(widget.lang, 'history'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), backgroundColor: Colors.black),
+      bottomNavigationBar: SafeArea(child: Container(alignment: Alignment.center, color: Colors.black, height: 50, width: double.infinity, child: const UnityBannerAd(placementId: 'Banner_Android'))),
       body: history.isEmpty 
           ? Center(child: Text(AppText.get(widget.lang, 'no_channels'), style: const TextStyle(color: Colors.grey, fontSize: 18)))
           : ListView.builder(
-              padding: const EdgeInsets.all(15),
-              itemCount: history.length,
+              padding: const EdgeInsets.all(15), itemCount: history.length,
               itemBuilder: (context, index) {
                 final c = history[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                    tileColor: const Color(0xFF1E1E1E),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                    leading: c.logo.isNotEmpty 
-                        ? Image.network(c.logo, width: 60, errorBuilder: (_,__,___) => Icon(getCategoryIcon(c.category), size: 40))
-                        : Icon(getCategoryIcon(c.category), size: 40),
-                    title: Text(c.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    subtitle: Text(c.category, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
-                    trailing: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15), tileColor: const Color(0xFF1E1E1E), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    leading: c.logo.isNotEmpty ? Image.network(c.logo, width: 60, errorBuilder: (_,__,___) => Icon(getCategoryIcon(c.category), size: 40)) : Icon(getCategoryIcon(c.category), size: 40),
+                    title: Text(c.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), subtitle: Text(c.category, style: const TextStyle(color: Colors.redAccent, fontSize: 14)), trailing: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
                     onTap: () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(channel: c)));
-                      try {
-                        UnityAds.showVideoAd(placementId: 'Interstitial_Android');
-                        UnityAds.load(placementId: 'Interstitial_Android');
-                      } catch(e){}
+                      try { UnityAds.showVideoAd(placementId: 'Interstitial_Android'); UnityAds.load(placementId: 'Interstitial_Android'); } catch(e){}
                     },
                   ),
                 );
@@ -733,6 +721,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 }
 
+// ==========================================
+// TELA 3: REPRODUTOR DE VÍDEO (SEM PAUSAS PARA CARREGAR)
+// ==========================================
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
   const PlayerScreen({super.key, required this.channel});
@@ -760,6 +751,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': '*/*',
         },
+        // O SEGREDO DO YOUTUBE LIVE: 
+        // Desligamos a pausa do buffer! Em vez de congelar a imagem com a rodinha de carregar, 
+        // ele vai simplesmente tentar acompanhar o direto e saltar os engasgos da rede.
+        extras: {
+          'cache': 'yes',
+          'cache-pause': 'no', 
+          'demuxer-max-bytes': '32MiB',
+          'demuxer-max-back-bytes': '0',
+        }
       ),
     );
   }
@@ -785,12 +785,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
             ),
           ),
           Positioned(
-            top: 25,
-            left: 25,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 35),
-              onPressed: () => Navigator.pop(context),
-            ),
+            top: 25, left: 25,
+            child: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 35), onPressed: () => Navigator.pop(context)),
           ),
         ],
       ),
