@@ -4,11 +4,9 @@ import java.io.FileInputStream
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Key properties dosyasını yükle
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
@@ -42,7 +40,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.ogos.anotheriptvplayer"
-        // 1. CORREÇÃO DO SDK: Força a versão mínima 21 (Exigência da Unity e do Vídeo)
+        // SDK 21 obrigatório para a Unity Ads funcionar
         minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -54,14 +52,16 @@ android {
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
-            // 2. CORREÇÃO DO CRASH: Desliga o encolhedor de código!
+            // A CORREÇÃO ESTÁ AQUI: Desliga ambos os encolhedores para não dar conflito!
             isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
 
         create("releaseUnsigned") {
-            // 2. CORREÇÃO DO CRASH AQUI TAMBÉM:
+            // A CORREÇÃO AQUI TAMBÉM:
             isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
