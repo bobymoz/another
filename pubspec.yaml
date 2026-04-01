@@ -1,31 +1,31 @@
-workflows:
-  android-workflow:
-    name: PlayTVNow Android Build
-    instance_type: mac_mini_m1
-    max_build_duration: 60
-    environment:
-      flutter: stable
-    scripts:
-      - name: Baixar pacotes do Flutter
-        script: |
-          flutter packages pub get
-      - name: Configurar Anúncios Unity e Gerar Ícone
-        script: |
-          flutter pub add dev:flutter_launcher_icons
-          flutter pub add unity_ads_plugin
-          cat <<EOF >> pubspec.yaml
-          
-          flutter_launcher_icons:
-            android: true
-            image_path: "assets/logo.png"
-          EOF
-          flutter pub run flutter_launcher_icons
-      - name: Construir o APK Leve (Separado por arquitetura)
-        script: |
-          flutter build apk --release --split-per-abi
-      - name: Construir o AAB (Para a Google Play Store)
-        script: |
-          flutter build appbundle --release
-    artifacts:
-      - build/app/outputs/flutter-apk/*.apk
-      - build/app/outputs/bundle/release/app-release.aab
+name: another_iptv_player
+description: PlayTVNow
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.2.2
+  media_kit: ^1.1.10+1
+  media_kit_video: ^1.2.4
+  media_kit_libs_video: ^1.0.4
+  unity_ads_plugin: ^0.3.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+
+# Configuração automática do seu Logótipo
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/logo.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo.png
