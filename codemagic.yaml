@@ -9,15 +9,29 @@ workflows:
       - name: Baixar pacotes do Flutter
         script: |
           flutter packages pub get
+      - name: Ajustar Android para a Unity Ads (MinSDK 21)
+        script: |
+          sed -i '' 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' android/app/build.gradle.kts || true
       - name: Gerar Ícone da Aplicação
         script: |
           flutter pub run flutter_launcher_icons
-      - name: Construir o APK Leve (Separado por arquitetura)
+      - name: Construir o APK e AAB (Sem Shrink para evitar Crashes)
         script: |
-          flutter build apk --release --split-per-abi
-      - name: Construir o AAB (Para a Google Play Store)
+          # A tag --no-shrink impede que o Android apague o motor de vídeo e a UnityAds!
+          flutter build apk --release --split-per-abi --no-shrink
+          flutter build appbundle --release --no-shrink
+      - name: Gerar Assinatura Digital e Assinar o APK
         script: |
-          flutter build appbundle --release
+          # 1. Cria a chave de segurança (Keystore) do PlayTVNow
+          keytool -genkey -v -keystore playtvnow.keystore -alias playtvnow -keyalg RSA -keysize 2048 -validity 10000 -storepass "jinoca2026" -keypass "jinoca2026" -dname "CN=PlayTVNow, OU=PlayTVNow, O=PlayTVNow, L=Maputo, ST=Maputo, C=MZ"
+          
+          # 2. Encontra a ferramenta oficial de assinatura do Android SDK
+          APKSIGNER=$(ls -d /usr/local/share/android-sdk/build-tools/*/apksigner | sort -r | head -n 1)
+          
+          # 3. Assina os APKs gerados. Adeus erro de "Sem Assinatura"!
+          for apk in build/app/outputs/flutter-apk/*-release.apk; do
+            $APKSIGNER sign --ks playtvnow.keystore --ks-pass pass:jinoca2026 "$apk"
+          done
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
       - build/app/outputs/bundle/release/app-release.aab
