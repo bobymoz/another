@@ -108,8 +108,13 @@ void main() {
     WidgetsFlutterBinding.ensureInitialized();
     try {
       MediaKit.ensureInitialized();
+      
+      // A UNITY É INICIADA UMA ÚNICA VEZ AQUI (Com modo de teste desligado para faturar real)
       try {
-        await UnityAds.init(gameId: '6079651', testMode: false);
+        await UnityAds.init(
+          gameId: '6079651', 
+          testMode: false,
+        );
       } catch (e) {
         debugPrint('Unity Init Error: $e');
       }
@@ -384,7 +389,7 @@ class _SourceScreenState extends State<SourceScreen> {
                 Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               ],
             )),
-            Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 24),
+            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 24),
           ],
         ),
       ),
@@ -503,20 +508,23 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             tooltip: AppText.get(widget.lang, 'change_lang'),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
-              await prefs.clear(); // Limpa tudo para o utilizador poder reconfigurar
+              await prefs.clear(); 
               if (context.mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LanguageScreen()));
             },
           )
         ],
       ),
-      // BANNER CORRIGIDO: Envolvido num SafeArea e com alinhamento explícito para forçar a renderização
+      // BANNER CORRIGIDO: Com tamanho estrito e seguro
       bottomNavigationBar: SafeArea(
         child: Container(
-          alignment: Alignment.center,
           color: Colors.black,
           height: 50,
           width: double.infinity,
-          child: const UnityBannerAd(placementId: 'Banner_Android'),
+          alignment: Alignment.center,
+          child: const UnityBannerAd(
+            placementId: 'Banner_Android',
+            size: BannerSize.standard,
+          ),
         ),
       ),
       body: isLoading 
@@ -696,7 +704,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(AppText.get(widget.lang, 'history'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), backgroundColor: Colors.black),
-      bottomNavigationBar: SafeArea(child: Container(alignment: Alignment.center, color: Colors.black, height: 50, width: double.infinity, child: const UnityBannerAd(placementId: 'Banner_Android'))),
+      bottomNavigationBar: SafeArea(child: Container(alignment: Alignment.center, color: Colors.black, height: 50, width: double.infinity, child: const UnityBannerAd(placementId: 'Banner_Android', size: BannerSize.standard))),
       body: history.isEmpty 
           ? Center(child: Text(AppText.get(widget.lang, 'no_channels'), style: const TextStyle(color: Colors.grey, fontSize: 18)))
           : ListView.builder(
