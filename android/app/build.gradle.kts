@@ -14,7 +14,8 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "dev.ogos.anotheriptvplayer"
+    // O NOVO BI OFICIAL DA SUA MARCA
+    namespace = "com.jinoca.playtvnow"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
@@ -39,8 +40,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "dev.ogos.anotheriptvplayer"
-        // SDK 21 obrigatório para a Unity Ads funcionar
+        // O NOVO BI OFICIAL DA SUA MARCA AQUI TAMBÉM
+        applicationId = "com.jinoca.playtvnow"
         minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -52,14 +53,12 @@ android {
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
-            // A CORREÇÃO ESTÁ AQUI: Desliga ambos os encolhedores para não dar conflito!
             isMinifyEnabled = false
             isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
 
         create("releaseUnsigned") {
-            // A CORREÇÃO AQUI TAMBÉM:
             isMinifyEnabled = false
             isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
