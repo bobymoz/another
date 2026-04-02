@@ -16,19 +16,25 @@ workflows:
         script: |
           flutter build apk --release --split-per-abi
           flutter build appbundle --release
-      - name: Gerar Assinatura Digital e Assinar (APK e AAB)
+      - name: Assinatura Permanente (A Magia Acontece Aqui)
         script: |
-          # 1. Cria a chave de segurança (Keystore) do PlayTVNow
-          keytool -genkey -v -keystore playtvnow.keystore -alias playtvnow -keyalg RSA -keysize 2048 -validity 10000 -storepass "jinoca2026" -keypass "jinoca2026" -dname "CN=PlayTVNow, OU=PlayTVNow, O=PlayTVNow, L=Maputo, ST=Maputo, C=MZ"
+          # 1. Verifica se a chave já existe no GitHub
+          if [ -f "playtvnow.keystore" ]; then
+            echo "Chave permanente encontrada no GitHub! A proteger o aplicativo..."
+          else
+            echo "Chave não encontrada. A gerar a sua Chave Permanente oficial..."
+            keytool -genkey -v -keystore playtvnow.keystore -alias playtvnow -keyalg RSA -keysize 2048 -validity 10000 -storepass "jinoca2026" -keypass "jinoca2026" -dname "CN=PlayTVNow, OU=PlayTVNow, O=PlayTVNow, L=Maputo, ST=Maputo, C=MZ"
+          fi
           
-          # 2. Assinar os APKs para teste no telemóvel
+          # 2. Assina o AAB (Para a Google Play)
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore playtvnow.keystore -storepass "jinoca2026" build/app/outputs/bundle/release/app-release.aab playtvnow
+          
+          # 3. Assina os APKs (Para instalar direto no telemóvel)
           APKSIGNER=$(ls -d /usr/local/share/android-sdk/build-tools/*/apksigner | sort -r | head -n 1)
           for apk in build/app/outputs/flutter-apk/*-release.apk; do
             $APKSIGNER sign --ks playtvnow.keystore --ks-pass pass:jinoca2026 "$apk"
           done
-          
-          # 3. A SOLUÇÃO DA GOOGLE PLAY: Assinar o ficheiro AAB!
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore playtvnow.keystore -storepass "jinoca2026" build/app/outputs/bundle/release/app-release.aab playtvnow
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
       - build/app/outputs/bundle/release/app-release.aab
+      - playtvnow.keystore # Exporta a chave para você fazer o download!
